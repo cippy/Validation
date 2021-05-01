@@ -7,7 +7,7 @@ logging.basicConfig(level=logging.INFO)
 
 from array import array
 import shutil
-from CMS_lumi import *
+from plotUtils.CMS_lumi import *
     
 _canvas_pull = ROOT.TCanvas("_canvas_pull","",800,800)
 

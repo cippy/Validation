@@ -51,20 +51,19 @@ if __name__ == "__main__":
 
 
     # Eflow tree
-    filename = options.indir+file_Eflow[campaign]
-    tf_Eflow = ROOT.TFile.Open(filename,'read')        
-    if not tf_Eflow or tf_Eflow.IsZombie():
-        print "ERROR! Unable to open file %s" % filename
+    filename = files[0]
+    rf = ROOT.TFile.Open(filename,'read')        
+    if not rf or rf.IsZombie():
+        print(f"ERROR! Unable to open file {filename}")
         quit()
-    treename = tree_Eflow
-    t_Eflow = tf_Eflow.Get(treename)
-    if not t_Eflow:
-        print "ERROR! Unable to get tree %s in %s" % (treename,filename)
+    treename = "Events"
+    t = rf.Get(treename)
+    if not t:
+        print(f"ERROR! Unable to get tree {treename} in {filename}")
         quit()
 
-    
-        for event in t_hotChannels:
-        izside = 0 if event.iz < 0 else 1
-
-
+    ievent = 0
+    for event in t:
+        print(f"{ievent}")
+        ievent += 1
         
