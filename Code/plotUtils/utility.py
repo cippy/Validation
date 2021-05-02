@@ -264,7 +264,9 @@ def drawTH1(htmp,
             canvasSize="700,625",
             passCanvas=None,
             moreTextLatex="",
-            skipTdrStyle=False
+            skipStatBox=False,
+            skipTdrStyle=False,
+            setLogy=False
             ):
 
 
@@ -284,7 +286,7 @@ def drawTH1(htmp,
     canvas.cd()
     canvas.SetBottomMargin(0.14)
     canvas.SetLeftMargin(0.12)
-    canvas.SetRightMargin(0.04)
+    canvas.SetRightMargin(0.08)
     canvas.cd()
 
     h.SetLineColor(ROOT.kBlack)
@@ -300,14 +302,15 @@ def drawTH1(htmp,
     if (setXAxisRangeFromUser): h.GetXaxis().SetRangeUser(xmin,xmax)
     if (setYAxisRangeFromUser): h.GetYaxis().SetRangeUser(ymin,ymax)
     # force drawing stat box
-    h.SetStats(1)
+    h.SetStats(0 if skipStatBox else 1)
     h.Draw("HIST")
     canvas.RedrawAxis("sameaxis")
     if not skipTdrStyle: 
         setTDRStyle()
-    # force drawing stat box
-    ROOT.gStyle.SetOptStat(111110)
-    ROOT.gStyle.SetOptFit(1102)
+    if not skipStatBox:
+        # force drawing stat box
+        ROOT.gStyle.SetOptStat(111110)
+        ROOT.gStyle.SetOptFit(1102)
     #    
     if len(moreTextLatex):
         realtext = moreTextLatex.split("::")[0]
@@ -321,8 +324,12 @@ def drawTH1(htmp,
         for itx,tx in enumerate(realtext.split(";")):
             lat.DrawLatex(x1,y1-itx*ypass,tx)
 
+            
     for ext in ["png","pdf"]:
+        if setLogy:
+            canvas.SetLogy()
         canvas.SaveAs(outdir + "{pfx}{hname}.{ext}".format(pfx=prefix,hname=("_"+outhistname) if len(outhistname) else "",ext=ext))
+    canvas.SetLogy(0)
 
 
 
@@ -339,6 +346,7 @@ def drawCorrelationPlot(h2D_tmp,
                         rebinFactorY=0,
                         smoothPlot=False,
                         drawProfileX=False,
+                        drawProfileY=False,
                         scaleToUnitArea=False,
                         draw_both0_noLog1_onlyLog2=1,
                         leftMargin=0.16,
@@ -351,7 +359,9 @@ def drawCorrelationPlot(h2D_tmp,
                         plotError=False,
                         plotRelativeError=False,
                         lumi=None,
-                        drawOption = "colz"):
+                        drawOption = "colz",
+                        skipLumi=False
+):
 
 
     ROOT.TH1.SetDefaultSumw2()
@@ -463,10 +473,17 @@ def drawCorrelationPlot(h2D_tmp,
         h2DProfile.SetMarkerStyle(20)
         h2DProfile.SetMarkerSize(1)
         h2DProfile.Draw("EPsame")
+    h2DProfileY = 0
+    if drawProfileY:
+        h2DProfileY = h2D.ProfileY("%s_pfy" %h2D.GetName())
+        h2DProfileY.SetMarkerColor(ROOT.kGray+3)
+        h2DProfileY.SetMarkerStyle(22)
+        h2DProfileY.SetMarkerSize(1)
+        h2DProfileY.Draw("EPsame")
         
     # not yet implemented
     setTDRStyle()
-    if not plotLabel == "ForceTitle": 
+    if not skipLumi and not plotLabel == "ForceTitle" : 
         if lumi != None: CMS_lumi(canvas,lumi,True,False)
         else:            CMS_lumi(canvas,"",True,False)
 
@@ -483,7 +500,7 @@ def drawCorrelationPlot(h2D_tmp,
     leg.SetBorderSize(0)
     leg.SetTextFont(62)
     if plotLabel not in ["", "ForceTitle"]: leg.AddEntry(0,plotLabel,"")
-    if drawProfileX: leg.AddEntry(0,"Correlation = %.2f" % h2DPlot.GetCorrelationFactor(),"")
+    #if drawProfileX: leg.AddEntry(0,"Correlation = %.2f" % h2DPlot.GetCorrelationFactor(),"")
     leg.Draw("same")
 
     if (draw_both0_noLog1_onlyLog2 == 0 or draw_both0_noLog1_onlyLog2 == 1):
@@ -809,7 +826,9 @@ def drawNTH1(hists=[],
              moreText="",
              moreTextLatex="",
              onlyLineColor=False,
-             drawErrorAll=False # default draws error only on first histogram
+             drawErrorAll=False, # default draws error only on first histogram
+             drawLineMarkerAsPalette=False, #pass palette used with draw option PLC PMC,
+             palette=105 # palette for option drawLineMarkerAsPalette
 ):
 
     # moreText is used to pass some text to write somewhere (TPaveText is used)
@@ -871,37 +890,45 @@ def drawNTH1(hists=[],
     frame.GetXaxis().SetLabelSize(0.04)
     frame.SetStats(0)
 
-    h1.SetLineColor(ROOT.kBlack)
-    h1.SetMarkerColor(ROOT.kBlack)
-    h1.SetMarkerStyle(20)
-    #h1.SetMarkerSize(0)
 
-    colors = [ROOT.kRed+2, ROOT.kBlue, ROOT.kGreen+2, ROOT.kOrange+7, ROOT.kAzure+2, ROOT.kMagenta, ROOT.kBlack]
-    for ic,h in enumerate(hnums):
-        # h.SetLineColor(colors[ic])
-        # h.SetFillColor(colors[ic])
-        # if ic==0: h.SetFillStyle(3004)   
-        # if ic==2: h.SetFillStyle(3002)   
-        # h.SetFillColor(colors[ic])
-        # h.SetMarkerSize(0)
-        h.SetLineColor(colors[ic])
-        h.SetMarkerSize(0)
-        if not onlyLineColor:
-            h.SetFillColor(colors[ic])
-            if ic==0: 
-                h.SetFillStyle(3004)   
-            if ic==1: 
-                h.SetFillColor(0) 
-                h.SetLineWidth(2) 
-            if ic==2: 
-                h.SetFillStyle(3002)           
-            if ic==3:
-                h.SetFillColor(0)
-                h1.SetMarkerColor(ROOT.kGray+3)
-                h1.SetMarkerStyle(25)
-                #h1.SetMarkerSize(2)
-        else:
-            h.SetLineWidth(2)
+    if drawLineMarkerAsPalette:
+        for i in range(len(hists)):
+            hists[i].SetLineWidth(2)
+            hists[i].SetMarkerStyle(20+i)
+            hists[i].SetFillColor(0)
+    else:
+        h1.SetLineColor(ROOT.kBlack)
+        h1.SetMarkerColor(ROOT.kBlack)
+        h1.SetMarkerStyle(20)
+        #h1.SetMarkerSize(0)
+
+        colors = [ROOT.kRed+2, ROOT.kBlue, ROOT.kGreen+2, ROOT.kOrange+7, ROOT.kAzure+2, ROOT.kMagenta, ROOT.kBlack]
+        for ic,h in enumerate(hnums):
+            # h.SetLineColor(colors[ic])
+            # h.SetFillColor(colors[ic])
+            # if ic==0: h.SetFillStyle(3004)   
+            # if ic==2: h.SetFillStyle(3002)   
+            # h.SetFillColor(colors[ic])
+            # h.SetMarkerSize(0)
+            h.SetLineColor(colors[ic])
+            h.SetMarkerSize(0)
+            if not onlyLineColor:
+                h.SetFillColor(colors[ic])
+                if ic==0: 
+                    h.SetFillStyle(3004)   
+                if ic==1: 
+                    h.SetFillColor(0) 
+                    h.SetLineWidth(2) 
+                if ic==2: 
+                    h.SetFillStyle(3002)           
+                if ic==3:
+                    h.SetFillColor(0)
+                    h1.SetMarkerColor(ROOT.kGray+3)
+                    h1.SetMarkerStyle(25)
+                    #h1.SetMarkerSize(2)
+            else:
+                h.SetLineWidth(2)
+
     #ymax = max(ymax, max(h1.GetBinContent(i)+h1.GetBinError(i) for i in range(1,h1.GetNbinsX()+1)))
     # if min and max were not set, set them based on histogram content
     if ymin == ymax == 0.0:
@@ -933,10 +960,16 @@ def drawNTH1(hists=[],
     h1.GetYaxis().SetRangeUser(ymin, ymax)
     h1.GetYaxis().SetTickSize(0.01)
     if setXAxisRangeFromUser: h1.GetXaxis().SetRangeUser(xmin,xmax)
-    h1.Draw("PE")
-    for h in hnums:
-        h.Draw("HE SAME" if drawErrorAll else "HIST SAME")
-
+    if drawLineMarkerAsPalette:
+        ROOT.gStyle.SetPalette(palette)        
+        for i in range(len(hists)):
+            hists[i].Draw("PLC PMC" if i == 0 else "PLC PMC SAME")
+    else:
+        h1.Draw("PE")
+        for h in hnums:
+            h.Draw("HE SAME" if drawErrorAll else "HIST SAME")
+        
+        
     nColumnsLeg = 1
     if ";" in legendCoords: 
         nColumnsLeg = int(legendCoords.split(";")[1])
@@ -950,7 +983,7 @@ def drawNTH1(hists=[],
     leg.SetBorderSize(0)
     leg.SetNColumns(nColumnsLeg)
     for il,le in enumerate(legEntries):
-        leg.AddEntry(hists[il],le,"PE" if il == 0 else "L" if onlyLineColor else "FL")
+        leg.AddEntry(hists[il],le,"PL" if drawLineMarkerAsPalette else "PE" if il == 0 else "L" if onlyLineColor else "FL")
     leg.Draw("same")
     canvas.RedrawAxis("sameaxis")
 
