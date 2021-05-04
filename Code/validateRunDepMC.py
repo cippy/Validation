@@ -67,8 +67,17 @@ if __name__ == "__main__":
         outdir += '/'
     createPlotDirAndCopyPhp(outdir)
 
-    files = [join(args.inputdir[0], f) for f in listdir(args.inputdir[0]) if isfile(join(args.inputdir[0], f)) and f.endswith(".root")]
+    files = []
+    if isfile(args.inputdir[0]):
+        with open(args.inputdir[0]) as f:
+            for line in f:
+              files.append(line.strip())  
+    else:   
+        files = [join(args.inputdir[0], f) for f in listdir(args.inputdir[0]) if isfile(join(args.inputdir[0], f)) and f.endswith(".root")]
 
+    #print(files)
+    #quit()
+        
     if args.nMaxFiles > 0:
         files = files[:args.nMaxFiles]
     logging.debug(len(files))
@@ -94,16 +103,16 @@ if __name__ == "__main__":
     print(f"Chain formed: there are {chain.GetEntries()} to process")
     print("\n\n")
 
-    lok  = chain.GetListOfLeaves()
-    chain.SetBranchStatus("*",0)
-    print("Using these branches")
-    for b in lok:
-        name = b.GetName()
-        if not name.startswith("Ecal") and "EventAuxiliary" not in name:
-            continue
-        #EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj
-        print(f"{name}")
-        chain.SetBranchStatus(name,1)
+    # lok  = chain.GetListOfLeaves()
+    # chain.SetBranchStatus("*",0)
+    # print("Using these branches")
+    # for b in lok:
+    #     name = b.GetName()
+    #     if not name.startswith("Ecal") and "EventAuxiliary" not in name and not re.match("^E(B|E)DigiCollection.*",name):
+    #         continue
+    #     #EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj
+    #     print(f"{name}")
+    #     chain.SetBranchStatus(name,1)
     print("\n\n")
 
     model_runNumber = ROOT.TH1D("runNumber","run number", 120, 314000, 326000)
@@ -112,36 +121,85 @@ if __name__ == "__main__":
     #model_energyEBrechit = ROOT.TH1D("energyEBrechit","energy of EB RecHits", 100, 0, 15)    
     #model_energyEErechit = ROOT.TH1D("energyEErechit","energy of EE RecHits", 100, 0, 15)
 
+    model_numberEBreducedRechit_run = ROOT.TH2D("numberEBreducedRechit_run", ";run number;number of reduced EB RecHits;Events", 
+                                         120, 314000, 326000, 50, 0, 1000)
+    model_numberEEreducedRechit_run = ROOT.TH2D("numberEEreducedRechit_run", ";run number;number of reduced EE RecHits;Events", 
+                                         120, 314000, 326000, 50, 0, 1000)
+    model_numberESreducedRechit_run = ROOT.TH2D("numberESreducedRechit_run", ";run number;number of reduced ES RecHits;Events", 
+                                         120, 314000, 326000, 50, 0, 1000)
+    model_energyEBreducedRechit_run = ROOT.TH2D("energyEBreducedRechit_run", ";run number;energy of reduced EB RecHits;Events", 
+                                         120, 314000, 326000, 100, 0, 15)
+    model_energyEEreducedRechit_run = ROOT.TH2D("energyEEreducedRechit_run", ";run number;energy of reduced EE RecHits;Events", 
+                                         120, 314000, 326000, 100, 0, 15)
+    model_energyESreducedRechit_run = ROOT.TH2D("energyESreducedRechit_run", ";run number;energy of reduced ES RecHits;Events", 
+                                         120, 314000, 326000, 60, 0, 0.15)
     model_numberEBrechit_run = ROOT.TH2D("numberEBrechit_run", ";run number;number of EB RecHits;Events", 
-                                         120, 314000, 326000, 100, 0, 1000)
+                                         120, 314000, 326000, 100, 500, 2500)
     model_numberEErechit_run = ROOT.TH2D("numberEErechit_run", ";run number;number of EE RecHits;Events", 
-                                         120, 314000, 326000, 100, 0, 1000)
+                                         120, 314000, 326000, 75, 0, 1500)
     model_numberESrechit_run = ROOT.TH2D("numberESrechit_run", ";run number;number of ES RecHits;Events", 
-                                         120, 314000, 326000, 100, 0, 1000)
+                                         120, 314000, 326000, 75, 0, 1500)
     model_energyEBrechit_run = ROOT.TH2D("energyEBrechit_run", ";run number;energy of EB RecHits;Events", 
                                          120, 314000, 326000, 100, 0, 15)
     model_energyEErechit_run = ROOT.TH2D("energyEErechit_run", ";run number;energy of EE RecHits;Events", 
                                          120, 314000, 326000, 100, 0, 15)
-    model_numberTrigPrimDigi_run = ROOT.TH2D("numberTrigPrimDigi_run", ";run number;number of trig.prim. Digis;Events", 
-                                             120, 314000, 326000, 100, 0, 15)
-    #model_energyESrechit_run = ROOT.TH2D("energyESrechit_run", ";run number;energy of ES RecHits;Events", 
-    #                                     120, 314000, 326000, 100, 0, 15)
+    model_energyESrechit_run = ROOT.TH2D("energyESrechit_run", ";run number;energy of ES RecHits;Events", 
+                                         120, 314000, 326000, 100, 0, 15)
 
-    # EcalRecHitsSorted_ecalPreshowerRecHit_EcalRecHitsES_RECO.obj
+
+    model_numberBasicClusterEB_run = ROOT.TH2D("numberBasicClusterEB__run", ";run number;number of EB basic clusters;Events", 
+                                             120, 314000, 326000, 50, 0, 50)
+    model_etaBasicClusterEB_run = ROOT.TH2D("etaBasicClusterEB__run", ";run number;#eta of EB basic clusters;Events", 
+                                            120, 314000, 326000, 40, -1.5, 2.5)
+    model_energyBasicClusterEB_run = ROOT.TH2D("energyBasicClusterEB__run", ";run number;energy of EB basic clusters;Events", 
+                                             120, 314000, 326000, 100, 0, 100)
+
+    
+    model_numberBasicClusterEE_run = ROOT.TH2D("numberBasicClusterEE__run", ";run number;number of EE basic clusters;Events", 
+                                             120, 314000, 326000, 50, 0, 50)
+    model_etaBasicClusterEE_run = ROOT.TH2D("etaBasicClusterEE__run", ";run number;#eta of EE basic clusters;Events", 
+                                            120, 314000, 326000, 70, -3.0, 4.0)
+    model_energyBasicClusterEE_run = ROOT.TH2D("energyBasicClusterEE__run", ";run number;energy of EE basic clusters;Events", 
+                                             120, 314000, 326000, 100, 0, 100)
+
+    # model_numberEBdigi_run = ROOT.TH2D("numberEBdigi_run", ";run number;number of EB Digi;Events", 
+    #                                      120, 314000, 326000, 50, 0, 200)
+    # model_numberEEdigi_run = ROOT.TH2D("numberEEdigi_run", ";run number;number of EE Digi;Events", 
+    #                                      120, 314000, 326000, 50, 0, 200)
+    #model_numberTrigPrimDigi_run = ROOT.TH2D("numberTrigPrimDigi_run", ";run number;number of trig.prim. Digi;Events", 
+    #                                         120, 314000, 326000, 100, 0, 15)
+
     histsAndExprs = {model_runNumber      : ["EventAuxiliary.run()", "skipStatBox"],
                      #model_numberEBrechit : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.size()"],
                      #model_numberEErechit : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.size()"],
                      #model_energyEBrechit : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.obj.energy()", "logy"],
                      #model_energyEErechit : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.obj.energy()", "logy"],
-                     model_numberEBrechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.size():EventAuxiliary.run()"],
-                     model_numberEErechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.size():EventAuxiliary.run()"],
-                     model_numberESrechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsES__RECO.obj.size():EventAuxiliary.run()"],
-                     model_energyEBrechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
-                     model_energyEErechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
-                     #model_energyESrechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsES__RECO_obj.product().energy():EventAuxiliary.run()", "logz"],
-                     model_numberTrigPrimDigi_run : ["EcalTrigPrimCompactColl_ecalCompactTrigPrim__RECO_obj.size():EventAuxiliary.run()"],
+
+                     # model_numberEBreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.size():EventAuxiliary.run()"],
+                     # model_numberEEreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.size():EventAuxiliary.run()"],
+                     # model_numberESreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsES__RECO.obj.size():EventAuxiliary.run()"],
+                     # model_energyEBreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
+                     # model_energyEEreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
+                     # model_energyESreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsES__RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
+                     # model_numberEBrechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEB_RECO.obj.size():EventAuxiliary.run()"],
+                     # model_numberEErechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEE_RECO.obj.size():EventAuxiliary.run()"],
+                     # model_numberESrechit_run : ["EcalRecHitsSorted_ecalPreshowerRecHit_EcalRecHitsES_RECO.obj.size():EventAuxiliary.run()"],
+                     # model_energyEBrechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEB_RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
+                     # model_energyEErechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEE_RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
+                     # model_energyESrechit_run : ["EcalRecHitsSorted_ecalPreshowerRecHit_EcalRecHitsES_RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
+
+                     #model_numberEBdigi_run : ["EBDigiCollection_selectDigi_selectedEcalEBDigiCollection_RECO.obj.size():EventAuxiliary.run()", "logz"],
+                     #model_numberEEdigi_run : ["EEDigiCollection_selectDigi_selectedEcalEEDigiCollection_RECO.obj.size():EventAuxiliary.run()", "logz"],
+                     #model_numberTrigPrimDigi_run : ["EcalTrigPrimCompactColl_ecalCompactTrigPrim__RECO.obj.size():EventAuxiliary.run()"],
+                     model_numberBasicClusterEB_run : ["recoCaloClusters_particleFlowSuperClusterECAL_particleFlowBasicClusterECALBarrel_RECO.obj.size():EventAuxiliary.run()", "logz"],
+                     model_etaBasicClusterEB_run : ["recoCaloClusters_particleFlowSuperClusterECAL_particleFlowBasicClusterECALBarrel_RECO.obj.eta():EventAuxiliary.run()"],
+                     model_energyBasicClusterEB_run : ["recoCaloClusters_particleFlowSuperClusterECAL_particleFlowBasicClusterECALBarrel_RECO.obj.energy():EventAuxiliary.run()", "logz"],
+                     model_numberBasicClusterEE_run : ["recoCaloClusters_particleFlowSuperClusterECAL_particleFlowBasicClusterECALEndcap_RECO.obj.size():EventAuxiliary.run()", "logz"],
+                     model_etaBasicClusterEE_run : ["recoCaloClusters_particleFlowSuperClusterECAL_particleFlowBasicClusterECALEndcap_RECO.obj.eta():EventAuxiliary.run()"],
+                     model_energyBasicClusterEE_run : ["recoCaloClusters_particleFlowSuperClusterECAL_particleFlowBasicClusterECALEndcap_RECO.obj.energy():EventAuxiliary.run()", "logz"],
     }
 
+    
     canvas   = ROOT.TCanvas("canvas","", 700,800)
     canvas1D = ROOT.TCanvas("canvas1D","", 800,700)
     adjustSettings_CMS_lumi()
