@@ -54,6 +54,7 @@ if __name__ == "__main__":
     parser.add_argument("outdir",    type=str, nargs=1)
     parser.add_argument("-n", "--n-files", dest="nMaxFiles", type=int, default=0, help = "If positive, select how many files to use (default is to use all)")
     parser.add_argument("-v", "--verbose", type=int, default=3, choices=[0,1,2,3,4], help="Set verbosity level with logging, the larger the more verbose")
+    parser.add_argument(      "--time-indep", dest="timeIndependent", action="store_true", help = "Run on time independent MC (one run, and possibly other differences)")
     args = parser.parse_args()
 
     print("\n\n")
@@ -100,97 +101,97 @@ if __name__ == "__main__":
         chain.Add(name)
     logging.debug('='*30)
 
-    print(f"Chain formed: there are {chain.GetEntries()} to process")
+    print(f"Chain formed: there are {chain.GetEntries()} entries to process")
     print("\n\n")
 
-    # lok  = chain.GetListOfLeaves()
-    # chain.SetBranchStatus("*",0)
-    # print("Using these branches")
-    # for b in lok:
-    #     name = b.GetName()
-    #     if not name.startswith("Ecal") and "EventAuxiliary" not in name and not re.match("^E(B|E)DigiCollection.*",name):
-    #         continue
-    #     #EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj
-    #     print(f"{name}")
-    #     chain.SetBranchStatus(name,1)
+    lok  = chain.GetListOfLeaves()
+    chain.SetBranchStatus("*",0)
+    #print("Using these branches")
+    for b in lok:
+         name = b.GetName()
+         if name.startswith("recoMuon"):
+             continue
+         #if not name.startswith("Ecal") and "EventAuxiliary" not in name and not re.match("^E(B|E)DigiCollection.*",name):
+         #    continue
+         #EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj
+         #print(f"{name}")
+         chain.SetBranchStatus(name,1)
     print("\n\n")
 
-    model_runNumber = ROOT.TH1D("runNumber","run number", 120, 314000, 326000)
-    #model_numberEBrechit = ROOT.TH1D("numberEBrechit","number of EB RecHits", 100, 0, 1000)
-    #model_numberEErechit = ROOT.TH1D("numberEErechit","number of EE RecHits", 100, 0, 1000)
-    #model_energyEBrechit = ROOT.TH1D("energyEBrechit","energy of EB RecHits", 100, 0, 15)    
-    #model_energyEErechit = ROOT.TH1D("energyEErechit","energy of EE RecHits", 100, 0, 15)
+    nRunBins = 120
+    runLow = 314000
+    runHigh = 326000
+    if args.timeIndependent:
+        print("Setting run ranges for a single run in time-independent MC")
+        nRunBins = 1
+        runLow = 0.0
+        runHigh = 2.0
+        
+    
+    model_runNumber = ROOT.TH1D("runNumber","run number", nRunBins, runLow, runHigh)
+
+    # doesn't work as expected when filling histograms
+    #model_EBreducedRechit = ROOT.TH3D("EBreducedRechit", ";run number;number of reduced EB RecHits;energy of reduced EB RecHits (GeV)", 
+    #                                  nRunBins, runLow, runHigh, 50, 0, 1000, 60, 0, 15)
+
+    model_energyPFRechit_run = ROOT.TH2D("energyPFRechit_run", ";run number;energy of PFRecHits (GeV);Events", 
+                                         nRunBins, runLow, runHigh, 60, 0, 15)
+    
 
     model_numberEBreducedRechit_run = ROOT.TH2D("numberEBreducedRechit_run", ";run number;number of reduced EB RecHits;Events", 
-                                         120, 314000, 326000, 50, 0, 1000)
+                                                nRunBins, runLow, runHigh, 50, 0, 1000)
     model_numberEEreducedRechit_run = ROOT.TH2D("numberEEreducedRechit_run", ";run number;number of reduced EE RecHits;Events", 
-                                         120, 314000, 326000, 50, 0, 1000)
-    model_numberESreducedRechit_run = ROOT.TH2D("numberESreducedRechit_run", ";run number;number of reduced ES RecHits;Events", 
-                                         120, 314000, 326000, 50, 0, 1000)
-    model_energyEBreducedRechit_run = ROOT.TH2D("energyEBreducedRechit_run", ";run number;energy of reduced EB RecHits;Events", 
-                                         120, 314000, 326000, 100, 0, 15)
-    model_energyEEreducedRechit_run = ROOT.TH2D("energyEEreducedRechit_run", ";run number;energy of reduced EE RecHits;Events", 
-                                         120, 314000, 326000, 100, 0, 15)
-    model_energyESreducedRechit_run = ROOT.TH2D("energyESreducedRechit_run", ";run number;energy of reduced ES RecHits;Events", 
-                                         120, 314000, 326000, 60, 0, 0.15)
+                                                nRunBins, runLow, runHigh, 50, 0, 1000)
+    model_energyEBreducedRechit_run = ROOT.TH2D("energyEBreducedRechit_run", ";run number;energy of reduced EB RecHits (GeV);Events", 
+                                                nRunBins, runLow, runHigh, 60, 0, 15)
+    model_energyEEreducedRechit_run = ROOT.TH2D("energyEEreducedRechit_run", ";run number;energy of reduced EE RecHits (GeV);Events", 
+                                                nRunBins, runLow, runHigh, 60, 0, 15)
     model_numberEBrechit_run = ROOT.TH2D("numberEBrechit_run", ";run number;number of EB RecHits;Events", 
-                                         120, 314000, 326000, 100, 500, 2500)
+                                         nRunBins, runLow, runHigh, 100, 500, 2500)
     model_numberEErechit_run = ROOT.TH2D("numberEErechit_run", ";run number;number of EE RecHits;Events", 
-                                         120, 314000, 326000, 75, 0, 1500)
-    model_numberESrechit_run = ROOT.TH2D("numberESrechit_run", ";run number;number of ES RecHits;Events", 
-                                         120, 314000, 326000, 75, 0, 1500)
-    model_energyEBrechit_run = ROOT.TH2D("energyEBrechit_run", ";run number;energy of EB RecHits;Events", 
-                                         120, 314000, 326000, 100, 0, 15)
-    model_energyEErechit_run = ROOT.TH2D("energyEErechit_run", ";run number;energy of EE RecHits;Events", 
-                                         120, 314000, 326000, 100, 0, 15)
-    model_energyESrechit_run = ROOT.TH2D("energyESrechit_run", ";run number;energy of ES RecHits;Events", 
-                                         120, 314000, 326000, 100, 0, 15)
+                                         nRunBins, runLow, runHigh, 75, 0, 1500)
+    model_energyEBrechit_run = ROOT.TH2D("energyEBrechit_run", ";run number;energy of EB RecHits (GeV);Events", 
+                                         nRunBins, runLow, runHigh, 60, 0, 15)
+    model_energyEErechit_run = ROOT.TH2D("energyEErechit_run", ";run number;energy of EE RecHits (GeV);Events", 
+                                         nRunBins, runLow, runHigh, 60, 0, 15)
 
 
     model_numberBasicClusterEB_run = ROOT.TH2D("numberBasicClusterEB__run", ";run number;number of EB basic clusters;Events", 
-                                             120, 314000, 326000, 50, 0, 50)
+                                               nRunBins, runLow, runHigh, 50, 0, 50)
     model_etaBasicClusterEB_run = ROOT.TH2D("etaBasicClusterEB__run", ";run number;#eta of EB basic clusters;Events", 
-                                            120, 314000, 326000, 40, -1.5, 2.5)
-    model_energyBasicClusterEB_run = ROOT.TH2D("energyBasicClusterEB__run", ";run number;energy of EB basic clusters;Events", 
-                                             120, 314000, 326000, 100, 0, 100)
+                                            nRunBins, runLow, runHigh, 40, -1.5, 2.5)
+    model_energyBasicClusterEB_run = ROOT.TH2D("energyBasicClusterEB__run", ";run number;energy of EB basic clusters (GeV);Events", 
+                                               nRunBins, runLow, runHigh, 100, 0, 100)
 
-    
+
     model_numberBasicClusterEE_run = ROOT.TH2D("numberBasicClusterEE__run", ";run number;number of EE basic clusters;Events", 
-                                             120, 314000, 326000, 50, 0, 50)
+                                               nRunBins, runLow, runHigh, 50, 0, 50)
     model_etaBasicClusterEE_run = ROOT.TH2D("etaBasicClusterEE__run", ";run number;#eta of EE basic clusters;Events", 
-                                            120, 314000, 326000, 70, -3.0, 4.0)
-    model_energyBasicClusterEE_run = ROOT.TH2D("energyBasicClusterEE__run", ";run number;energy of EE basic clusters;Events", 
-                                             120, 314000, 326000, 100, 0, 100)
-
+                                            nRunBins, runLow, runHigh, 70, -3.0, 4.0)
+    model_energyBasicClusterEE_run = ROOT.TH2D("energyBasicClusterEE__run", ";run number;energy of EE basic clusters (GeV);Events", 
+                                               nRunBins, runLow, runHigh, 100, 0, 100)
+    
     # model_numberEBdigi_run = ROOT.TH2D("numberEBdigi_run", ";run number;number of EB Digi;Events", 
-    #                                      120, 314000, 326000, 50, 0, 200)
+    #                                      nRunBins, runLow, runHigh, 50, 0, 200)
     # model_numberEEdigi_run = ROOT.TH2D("numberEEdigi_run", ";run number;number of EE Digi;Events", 
-    #                                      120, 314000, 326000, 50, 0, 200)
-    #model_numberTrigPrimDigi_run = ROOT.TH2D("numberTrigPrimDigi_run", ";run number;number of trig.prim. Digi;Events", 
-    #                                         120, 314000, 326000, 100, 0, 15)
+    #                                      nRunBins, runLow, runHigh, 50, 0, 200)
 
     histsAndExprs = {model_runNumber      : ["EventAuxiliary.run()", "skipStatBox"],
-                     #model_numberEBrechit : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.size()"],
-                     #model_numberEErechit : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.size()"],
-                     #model_energyEBrechit : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.obj.energy()", "logy"],
-                     #model_energyEErechit : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.obj.energy()", "logy"],
 
-                     # model_numberEBreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.size():EventAuxiliary.run()"],
-                     # model_numberEEreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.size():EventAuxiliary.run()"],
-                     # model_numberESreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsES__RECO.obj.size():EventAuxiliary.run()"],
-                     # model_energyEBreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
-                     # model_energyEEreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
-                     # model_energyESreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsES__RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
-                     # model_numberEBrechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEB_RECO.obj.size():EventAuxiliary.run()"],
-                     # model_numberEErechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEE_RECO.obj.size():EventAuxiliary.run()"],
-                     # model_numberESrechit_run : ["EcalRecHitsSorted_ecalPreshowerRecHit_EcalRecHitsES_RECO.obj.size():EventAuxiliary.run()"],
-                     # model_energyEBrechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEB_RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
-                     # model_energyEErechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEE_RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
-                     # model_energyESrechit_run : ["EcalRecHitsSorted_ecalPreshowerRecHit_EcalRecHitsES_RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
+                     #model_EBreducedRechit : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.obj.energy():EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.size():EventAuxiliary.run()","logz"]
 
-                     #model_numberEBdigi_run : ["EBDigiCollection_selectDigi_selectedEcalEBDigiCollection_RECO.obj.size():EventAuxiliary.run()", "logz"],
-                     #model_numberEEdigi_run : ["EEDigiCollection_selectDigi_selectedEcalEEDigiCollection_RECO.obj.size():EventAuxiliary.run()", "logz"],
-                     #model_numberTrigPrimDigi_run : ["EcalTrigPrimCompactColl_ecalCompactTrigPrim__RECO.obj.size():EventAuxiliary.run()"],
+                     model_energyPFRechit_run : ["recoPFRecHits_particleFlowRecHitECAL_Cleaned_RECO.obj.energy():EventAuxiliary.run()", "logz"],
+                     
+                     model_numberEBreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.size():EventAuxiliary.run()"],
+                     model_numberEEreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.size():EventAuxiliary.run()"],
+                     model_energyEBreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEB__RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
+                     model_energyEEreducedRechit_run : ["EcalRecHitsSorted_reducedEcalRecHitsEE__RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
+                     model_numberEBrechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEB_RECO.obj.size():EventAuxiliary.run()"],
+                     model_numberEErechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEE_RECO.obj.size():EventAuxiliary.run()"],
+                     model_energyEBrechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEB_RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
+                     model_energyEErechit_run : ["EcalRecHitsSorted_ecalRecHit_EcalRecHitsEE_RECO.obj.obj.energy():EventAuxiliary.run()", "logz"],
+                     # #model_numberEBdigi_run : ["EBDigiCollection_selectDigi_selectedEcalEBDigiCollection_RECO.obj.size():EventAuxiliary.run()", "logz"],
+                     # #model_numberEEdigi_run : ["EEDigiCollection_selectDigi_selectedEcalEEDigiCollection_RECO.obj.size():EventAuxiliary.run()", "logz"],
                      model_numberBasicClusterEB_run : ["recoCaloClusters_particleFlowSuperClusterECAL_particleFlowBasicClusterECALBarrel_RECO.obj.size():EventAuxiliary.run()", "logz"],
                      model_etaBasicClusterEB_run : ["recoCaloClusters_particleFlowSuperClusterECAL_particleFlowBasicClusterECALBarrel_RECO.obj.eta():EventAuxiliary.run()"],
                      model_energyBasicClusterEB_run : ["recoCaloClusters_particleFlowSuperClusterECAL_particleFlowBasicClusterECALBarrel_RECO.obj.energy():EventAuxiliary.run()", "logz"],
@@ -200,12 +201,17 @@ if __name__ == "__main__":
     }
 
     
-    canvas   = ROOT.TCanvas("canvas","", 700,800)
-    canvas1D = ROOT.TCanvas("canvas1D","", 800,700)
+    canvas   = ROOT.TCanvas("canvas","", 800,800)
+    canvas1D = ROOT.TCanvas("canvas1D","", 900,800)
+    canvas1Dshort = ROOT.TCanvas("canvas1Dshort","", 800,700)
     adjustSettings_CMS_lumi()
 
     runBins = []
     nIOV = 1
+
+    foutname = outdir + "allHistograms.root"
+    fout = ROOT.TFile.Open(foutname, "RECREATE")
+    fout.cd()
     
     for h,extra in histsAndExprs.items():
 
@@ -217,6 +223,8 @@ if __name__ == "__main__":
 
         if h.Integral() == 0.0:
             logging.warning(f"{h.GetName()} has no entries, please check! It will be skipped")
+            if h.GetDimension() == 1 and h.Integral(0, 1+h.GetNbinsX()) > 0.0:
+                logging.warning(f"There seems to be events in the under/overflow bins, though, so check the range")
             continue
         
         if h.GetName() == "runNumber":
@@ -226,21 +234,84 @@ if __name__ == "__main__":
             nIOV = len(runBins)
                     
         if h.GetDimension() == 1:
+
             drawTH1(h, h.GetTitle(),
                     "Events", outdir, h.GetName(),
-                    passCanvas=canvas1D,
+                    passCanvas=canvas1Dshort,
                     skipStatBox=True if "skipStatBox" in opts else False,
                     setLogy=True if "logy" in opts else False
             )
+            h.Write()
+            
         elif h.GetDimension() == 2:
+
             drawCorrelationPlot(h,
                                 h.GetXaxis().GetTitle(), h.GetYaxis().GetTitle(), h.GetZaxis().GetTitle(),
                                 h.GetName(), outdir=outdir, drawProfileX=True,
                                 draw_both0_noLog1_onlyLog2=2 if "logz" in opts else 1,
                                 passCanvas=canvas, palette=57, skipLumi=True)            
-            hists = [h.ProjectionY(f"{h.GetName()}_projY_IOV{i+1}",runBins[i],runBins[i]) for i in range(nIOV)]
+            hists = [h.ProjectionY(f"{h.GetName()}_projY_IOV{i+1}",runBins[i],runBins[i],"e") for i in range(nIOV)]
             legEntries = [f"IOV {i+1}" for i in range(nIOV)]
-            drawNTH1(hists, legEntries, h.GetYaxis().GetTitle(), h.GetZaxis().GetTitle(),
-                     f"{h.GetName()}_projY", outdir=outdir, draw_both0_noLog1_onlyLog2=2 if "logz" in opts else 1,
+            if len(hists) == 1:
+                drawTH1(hists[0], h.GetYaxis().GetTitle(),
+                        "Events", outdir, hists[0].GetName(),
+                        passCanvas=canvas1Dshort,
+                        skipStatBox=True if "skipStatBox" in opts else False,
+                        setLogy=True if "logy" in opts else False
+                )
+            else:
+                drawNTH1(hists, legEntries, h.GetYaxis().GetTitle(), h.GetZaxis().GetTitle(),
+                         f"{h.GetName()}_projY", outdir=outdir, draw_both0_noLog1_onlyLog2=2 if "logz" in opts else 1,
+                         labelRatioTmp="IOV_{N} / IOV_{1}::0.5,1.5",
+                         legendCoords="0.75,0.95,0.4,0.9", lowerPanelHeight=0.3, passCanvas=canvas1D,
+                         skipLumi=True, drawLineMarkerAsPalette=True, palette=105)
+
+            h.Write()
+            for hist in hists:
+                hist.Write()
+            
+        elif h.GetDimension() == 3:
+
+            ####
+            #### Doesn't work as expected when filling histograms
+            
+            # Y vs X (number vs run)
+            projYvsX = getTH2fromTH3(h, f"{h.GetName()}_number_run", binStart=1, binEnd=h.GetNbinsZ(), proj="yxe")
+            drawCorrelationPlot(projYvsX,
+                                projYvsX.GetXaxis().GetTitle(), projYvsX.GetYaxis().GetTitle(), "Events",
+                                projYvsX.GetName(), outdir=outdir, drawProfileX=True,
+                                draw_both0_noLog1_onlyLog2=2 if "logy" in opts else 1,
+                                passCanvas=canvas, palette=57, skipLumi=True)            
+            hists = [projYvsX.ProjectionY(f"{projYvsX.GetName()}_projY_IOV{i+1}",runBins[i],runBins[i],"e") for i in range(nIOV)]
+            legEntries = [f"IOV {i+1}" for i in range(nIOV)]
+            drawNTH1(hists, legEntries, projYvsX.GetYaxis().GetTitle(), "Events",
+                     f"{projYvsX.GetName()}_projY", outdir=outdir, draw_both0_noLog1_onlyLog2=2 if "logy" in opts else 1,
                      legendCoords="0.75,0.95,0.4,0.9", lowerPanelHeight=0.0, passCanvas=canvas1D,
                      skipLumi=True, drawLineMarkerAsPalette=True, palette=105)
+
+            h.Write()
+            projYvsX.Write()
+            for hist in hists:
+                hist.Write()
+            
+            # Z vs X (energy vs run)
+            projZvsX = getTH2fromTH3(h, f"{h.GetName()}_energy_run", binStart=-1, proj="zxe")
+            drawCorrelationPlot(projZvsX,
+                                projZvsX.GetXaxis().GetTitle(), projZvsX.GetZaxis().GetTitle(), "Events",
+                                projZvsX.GetName(), outdir=outdir, drawProfileX=True,
+                                draw_both0_noLog1_onlyLog2=2 if "logz" in opts else 1,
+                                passCanvas=canvas, palette=57, skipLumi=True)            
+            hists = [projZvsX.ProjectionY(f"{projZvsX.GetName()}_projY_IOV{i+1}",runBins[i],runBins[i],"e") for i in range(nIOV)]
+            legEntries = [f"IOV {i+1}" for i in range(nIOV)]
+            drawNTH1(hists, legEntries, projZvsX.GetZaxis().GetTitle(), "Events",
+                     f"{projZvsX.GetName()}_projY", outdir=outdir, draw_both0_noLog1_onlyLog2=2 if "logz" in opts else 1,
+                     legendCoords="0.75,0.95,0.4,0.9", lowerPanelHeight=0.0, passCanvas=canvas1D,
+                     skipLumi=True, drawLineMarkerAsPalette=True, palette=105)
+
+            projZvsX.Write()
+            for hist in hists:
+                hist.Write()
+
+    fout.Close()
+    print(f"All histograms saved in file {foutname}")
+    print()

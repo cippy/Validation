@@ -184,7 +184,7 @@ def getMaximumTH(h, excludeMax=None):
                 for iz in range(1,h.GetNbinsZ()+1):
                     if retmax < h.GetBinContent(ix,iy,iz):
                         if excludeMax != None:
-                            if h.GetBinContent(ix,iy,iz) < excludeMax: retmax = h.GetBinContent(ix,iy,iz)                            
+                            if h.GetBinContent(ix,iy,iz) < excludeMax: retmax = h.GetBinContent(ix,iy,iz)
                         else:
                             retmax = h.GetBinContent(ix,iy,iz)
 
@@ -192,6 +192,25 @@ def getMaximumTH(h, excludeMax=None):
         raise RuntimeError("Error in getMaximumTH(): unsupported histogram's dimension (%d)" % dim)
 
     return retmax
+
+
+#########################################################################
+
+def getTH2fromTH3(hist3D, name, binStart, binEnd=None, proj="yxe"):
+    if binEnd == None:
+        binEnd = binStart
+    # using first bin as negative will not set the axis range, and thus use all bins including underflow and overflow
+    if binStart >= 0:
+        if "z" not in proj:
+            hist3D.GetZaxis().SetRange(binStart,binEnd)    
+        if "y" not in proj:
+            hist3D.GetYaxis().SetRange(binStart,binEnd)    
+        if "x" not in proj:
+            hist3D.GetXaxis().SetRange(binStart,binEnd)    
+    # Order yx matters to have consistent axes!
+    hist2D = hist3D.Project3D(proj) # make TH2 with y axis versus x axis 
+    hist2D.SetName(name)
+    return hist2D
 
 
 #########################################################################
@@ -389,7 +408,7 @@ def drawCorrelationPlot(h2D_tmp,
                 herr.SetBinContent(i,j,errval)
         h2D = herr
     else:
-        h2D = h2D_tmp
+        h2D = copy.deepcopy(h2D_tmp.Clone())
 
     ROOT.TColor.CreateGradientColorTable(3,
                                          array ("d", [0.00, 0.50, 1.00]),
@@ -1133,11 +1152,14 @@ def drawNTH1(hists=[],
                 #ratios[-1].SetMarkerSize(0)
                 #ratios[-1].SetMarkerStyle(0)
                 #ratios[-1].SetFillColor(0)
-                if h.GetFillColor():
-                    ratios[-1].Draw("E2 SAME")
+                if drawLineMarkerAsPalette:
+                    ratios[-1].Draw("PLC PMC SAME")
                 else:
-                    ratios[-1].Draw("HIST SAME")
-
+                    if h.GetFillColor():
+                        ratios[-1].Draw("E2 SAME")
+                    else:
+                        ratios[-1].Draw("HIST SAME")
+                        
         line = ROOT.TF1("horiz_line","1",ratio.GetXaxis().GetBinLowEdge(1),ratio.GetXaxis().GetBinLowEdge(ratio.GetNbinsX()+1))
         line.SetLineColor(ROOT.kBlack)
         line.SetLineWidth(1)
