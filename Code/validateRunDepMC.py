@@ -125,7 +125,7 @@ if __name__ == "__main__":
         print("Setting run ranges for a single run in time-independent MC")
         nRunBins = 1
         runLow = 0.0
-        runHigh = 2.0
+        runHigh = 10.0
         
     
     model_runNumber = ROOT.TH1D("runNumber","run number", nRunBins, runLow, runHigh)
